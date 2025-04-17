@@ -39,7 +39,7 @@ void capture_frame() {
     GstMapInfo map;
     if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
         char filename[20];
-        snprintf(filename, sizeof(filename), "capture%lld.txt", trigger_counter);
+        snprintf(filename, sizeof(filename), "capture%lld.raw", trigger_counter);
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
         fprintf(fd, "%f \n", time_in_seconds + pts_seconds);
