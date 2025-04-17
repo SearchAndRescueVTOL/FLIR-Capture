@@ -12,7 +12,7 @@
 #include <gpiod.h>
 
 #define OUTPUT_FILE_NAME "output.txt"
-#define GPIO_CHIP "/dev/gpiochip0"
+#define GPIO_CHIP "/dev/gpiochip4"
 #define GPIO_LINE 17  // BCM pin for GPIO17
 #define TIMEOUT_SEC 5
 
@@ -45,7 +45,7 @@ void capture_frame() {
         fprintf(fd, "%f \n", time_in_seconds + pts_seconds);
         fflush(fd);
 
-        FILE *out = fopen("capture.raw", "wb");
+        FILE *out = fopen(filename, "wb");
         fwrite(map.data, 1, map.size, out);
         fclose(out);
 
