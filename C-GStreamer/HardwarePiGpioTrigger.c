@@ -42,12 +42,14 @@ void capture_frame() {
         snprintf(filename, sizeof(filename), "capture%lld.raw", trigger_counter);
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
-        fprintf(fd, "%f \n", time_in_seconds + pts_seconds);
+        double diff = pts_seconds - time_in_seconds;
+        fprintf(fd, "%f \n", diff);
+        time_in_seconds = pts_seconds;
         fflush(fd);
 
-        FILE *out = fopen(filename, "wb");
-        fwrite(map.data, 1, map.size, out);
-        fclose(out);
+        // FILE *out = fopen(filename, "wb");
+        // fwrite(map.data, 1, map.size, out);
+        // fclose(out);
 
         g_print("Frame captured to capture.raw (%zu bytes)\n", map.size);
         gst_buffer_unmap(buffer, &map);
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
     gst_init(&argc, &argv);
     GstElement *pipeline = gst_parse_launch(
         "v4l2src device=/dev/video0 ! "
-        "video/x-raw,format=GRAY16_LE,width=640,height=512,framerate=9/1 ! "
+        "video/x-raw,format=GRAY16_LE,width=640,height=512,framerate=18/1 ! "
         "appsink name=sink", NULL);
 
     appsink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
@@ -106,8 +108,8 @@ int main(int argc, char *argv[]) {
         perror("clock_gettime");
         return -1;
     }
-    time_in_seconds = ts.tv_sec + ts.tv_nsec / 1e9;
-
+    // time_in_seconds = ts.tv_sec + ts.tv_nsec / 1e9;
+    time_in_seconds = 0;
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     g_usleep(10000000);  // Let the pipeline warm up
 
