@@ -20,6 +20,7 @@ GstElement *appsink = NULL;
 FILE *fd;
 long long trigger_counter = 0;
 double time_in_seconds = 0;
+struct timespec ts2;
 void set_cpu_affinity(int core_id) {
     cpu_set_t cpuset;
     CPU_ZERO(&cpuset);
@@ -34,17 +35,24 @@ void capture_frame() {
         g_printerr("Failed to capture sample\n");
         return;
     }
+    
+    // Get current time with clock_gettime
+    if (clock_gettime(CLOCK_REALTIME, &ts2) == -1) {
+        perror("clock_gettime");
+        return -1;
+    }
 
+    // Convert to decimal seconds
+    double time2 = ts2.tv_sec + ts2.tv_nsec / 1e9;
     GstBuffer *buffer = gst_sample_get_buffer(sample);
+    
     GstMapInfo map;
     if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
         char filename[20];
         snprintf(filename, sizeof(filename), "capture%lld.raw", trigger_counter);
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
-        double diff = pts_seconds - time_in_seconds;
-        fprintf(fd, "%f \n", diff);
-        time_in_seconds = pts_seconds;
+        fprintf(fd, "%f \n", time2 - time_in_seconds);
         fflush(fd);
 
         // FILE *out = fopen(filename, "wb");
@@ -85,6 +93,14 @@ void *handle_gpio_interrupt(void *arg) {
         }
 
         if (event.event_type == GPIOD_LINE_EVENT_RISING_EDGE) {
+        // Get current time with clock_gettime
+            if (clock_gettime(CLOCK_REALTIME, &ts2) == -1) {
+                perror("clock_gettime");
+                return -1;
+            }
+
+            // Convert to decimal seconds
+            time_in_seconds = ts2.tv_sec + ts2.tv_nsec / 1e9;
             capture_frame();
         }
     }
