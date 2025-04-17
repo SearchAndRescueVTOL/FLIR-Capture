@@ -1,2 +1,5 @@
 *.tiff
 *.raw
+env/
+SDK_USER_PERMISSIONS
+capture
