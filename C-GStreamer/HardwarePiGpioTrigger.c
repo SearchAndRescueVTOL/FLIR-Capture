@@ -64,7 +64,7 @@ void *handle_gpio_interrupt(void *arg) {
     struct gpiod_line_event event;
     struct timespec timeout;
     struct timespec ts;
-
+    set_cpu_affinity(3);
     while (1) {
         timeout.tv_sec = TIMEOUT_SEC;
         timeout.tv_nsec = 0;
@@ -97,7 +97,7 @@ int main(int argc, char *argv[]) {
     gst_init(&argc, &argv);
     GstElement *pipeline = gst_parse_launch(
         "v4l2src device=/dev/video0 ! "
-        "video/x-raw,format=GRAY16_LE,width=640,height=512,framerate=18/1 ! "
+        "video/x-raw,format=GRAY16_LE,width=640,height=512,framerate=9/1 ! "
         "appsink name=sink", NULL);
 
     appsink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
@@ -139,7 +139,6 @@ int main(int argc, char *argv[]) {
     }
     pthread_attr_t attr;
     struct sched_param param;
-    set_cpu_affinity(3);
     pthread_attr_init(&attr);
     pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
     param.sched_priority = sched_get_priority_max(SCHED_FIFO);
