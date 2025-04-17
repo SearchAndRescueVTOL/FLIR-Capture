@@ -95,7 +95,7 @@ void *handle_gpio_interrupt(void *arg) {
 
         if (event.event_type == GPIOD_LINE_EVENT_RISING_EDGE) {
         // Get current time with clock_gettime
-            GstClockTime pos;
+            gint64 pos;
             gst_element_query_position(pipeline, GST_FORMAT_TIME, &pos);
             time_in_seconds = (double)pos / GST_SECOND;
             capture_frame();
