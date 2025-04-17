@@ -84,15 +84,6 @@ void *handle_gpio_interrupt(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
-    pthread_t thread = pthread_self();
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(2, &cpuset);
-    pthread_setaffinity_np(thread, sizeof(cpu_set_t), &cpuset);
-
-    struct sched_param param;
-    param.sched_priority = 99;
-    pthread_setschedparam(thread, SCHED_FIFO, &param);
 
     gst_init(&argc, &argv);
     GstElement *pipeline = gst_parse_launch(
@@ -137,13 +128,22 @@ int main(int argc, char *argv[]) {
         perror("GPIO line request failed");
         return 1;
     }
-
+    pthread_attr_t attr;
+    struct sched_param param;
+    set_cpu_affinity(3);
+    pthread_attr_init(&attr);
+    pthread_attr_setschedpolicy(&attr, SCHED_FIFO);
+    param.sched_priority = sched_get_priority_max(SCHED_FIFO);
+    pthread_attr_setschedparam(&attr, &param);
     pthread_t gpio_thread;
-    pthread_create(&gpio_thread, NULL, handle_gpio_interrupt, line);
+    if (pthread_create(&gpio_thread, &attr, handle_gpio_interrupt, line) != 0) {
+        printf("Failed to create thread\n");
+        return;
+    }
 
     // Wait for GPIO thread
     pthread_join(gpio_thread, NULL);
-
+    pthread_attr_destroy(&attr);
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(appsink);
     gst_object_unref(pipeline);
