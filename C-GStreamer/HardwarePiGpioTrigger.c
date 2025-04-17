@@ -39,7 +39,7 @@ void capture_frame() {
     // Get current time with clock_gettime
     if (clock_gettime(CLOCK_REALTIME, &ts2) == -1) {
         perror("clock_gettime");
-        return -1;
+        return;
     }
 
     // Convert to decimal seconds
@@ -96,7 +96,7 @@ void *handle_gpio_interrupt(void *arg) {
         // Get current time with clock_gettime
             if (clock_gettime(CLOCK_REALTIME, &ts2) == -1) {
                 perror("clock_gettime");
-                return -1;
+                return NULL;
             }
 
             // Convert to decimal seconds
