@@ -20,7 +20,14 @@ GstElement *appsink = NULL;
 FILE *fd;
 long long trigger_counter = 0;
 double time_in_seconds = 0;
-
+void set_cpu_affinity(int core_id) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset); // Assign thread to core_id
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),&cpuset) != 0) {
+      printf("Error getting affinity!\n");
+    }
+}
 void capture_frame() {
     GstSample *sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
     if (!sample) {
