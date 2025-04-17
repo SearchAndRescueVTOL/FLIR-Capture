@@ -17,7 +17,6 @@
 #define TIMEOUT_SEC 5
 
 GstElement *appsink = NULL;
-GstElement *pipeline;
 FILE *fd;
 long long trigger_counter = 0;
 double time_in_seconds = 0;
@@ -37,14 +36,14 @@ void capture_frame() {
         return;
     }
     
-    // // Get current time with clock_gettime
-    // if (clock_gettime(CLOCK_REALTIME, &ts2) == -1) {
-    //     perror("clock_gettime");
-    //     return;
-    // }
+    // Get current time with clock_gettime
+    if (clock_gettime(CLOCK_REALTIME, &ts2) == -1) {
+        perror("clock_gettime");
+        return;
+    }
 
-    // // Convert to decimal seconds
-    // double time2 = ts2.tv_sec + ts2.tv_nsec / 1e9;
+    // Convert to decimal seconds
+    double time2 = ts2.tv_sec + ts2.tv_nsec / 1e9;
     GstBuffer *buffer = gst_sample_get_buffer(sample);
     
     GstMapInfo map;
@@ -53,7 +52,7 @@ void capture_frame() {
         snprintf(filename, sizeof(filename), "capture%lld.raw", trigger_counter);
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
-        fprintf(fd, "%f \n", pts_seconds - time_in_seconds);
+        fprintf(fd, "%f \n", time2 - time_in_seconds);
         fflush(fd);
 
         // FILE *out = fopen(filename, "wb");
@@ -95,9 +94,13 @@ void *handle_gpio_interrupt(void *arg) {
 
         if (event.event_type == GPIOD_LINE_EVENT_RISING_EDGE) {
         // Get current time with clock_gettime
-            gint64 pos;
-            gst_element_query_position(pipeline, GST_FORMAT_TIME, &pos);
-            time_in_seconds = (double)pos / GST_SECOND;
+            if (clock_gettime(CLOCK_REALTIME, &ts2) == -1) {
+                perror("clock_gettime");
+                return NULL;
+            }
+
+            // Convert to decimal seconds
+            time_in_seconds = ts2.tv_sec + ts2.tv_nsec / 1e9;
             capture_frame();
         }
     }
@@ -108,7 +111,7 @@ void *handle_gpio_interrupt(void *arg) {
 int main(int argc, char *argv[]) {
 
     gst_init(&argc, &argv);
-    pipeline = gst_parse_launch(
+    GstElement *pipeline = gst_parse_launch(
         "v4l2src device=/dev/video0 ! "
         "video/x-raw,format=GRAY16_LE,width=640,height=512,framerate=9/1 ! "
         "appsink name=sink", NULL);
