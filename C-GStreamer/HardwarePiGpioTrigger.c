@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <gpiod.h>
+#include "log.h"
 
 #define OUTPUT_FILE_NAME "output.txt"
 #define GPIO_CHIP "/dev/gpiochip4"
@@ -57,6 +58,8 @@ void capture_frame() {
 
     gst_sample_unref(sample);
     trigger_counter += 1;
+    log_trace("Trigger Number: %d", trigger_counter);
+    //Log Trigger
 }
 
 void *handle_gpio_interrupt(void *arg) {
@@ -93,6 +96,16 @@ void *handle_gpio_interrupt(void *arg) {
 }
 
 int main(int argc, char *argv[]) {
+
+    /////////////
+    FILE *logfile = fopen("LogOutput.txt", "a");  // "a" for append mode
+    if (!logfile) {
+        fprintf(stderr, "Failed to open log file\n");
+        return 1;
+    }
+    log_add_fp(logfile, LOG_TRACE);  // Log everything (TRACE and above)
+    log_info("Program started");
+    /////////////
 
     gst_init(&argc, &argv);
     GstElement *pipeline = gst_parse_launch(
