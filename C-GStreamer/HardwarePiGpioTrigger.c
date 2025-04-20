@@ -39,26 +39,26 @@ void capture_frame() {
     GstBuffer *buffer = gst_sample_get_buffer(sample);
     GstMapInfo map;
     if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-        char filename[20];
-        snprintf(filename, sizeof(filename), "capture%lld.raw", trigger_counter);
+        char filename[600];
+        trigger_counter += 1;
+        snprintf(filename, sizeof(filename), "/home/sarv-pi/IR_IMAGES/%lld.raw", trigger_counter);
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
         double diff = pts_seconds - time_in_seconds;
-        fprintf(fd, "%f \n", diff);
+        // fprintf(fd, "%f \n", diff);
         time_in_seconds = pts_seconds;
-        fflush(fd);
+        // fflush(fd);
 
-        // FILE *out = fopen(filename, "wb");
-        // fwrite(map.data, 1, map.size, out);
-        // fclose(out);
+        FILE *out = fopen(filename, "wb");
+        fwrite(map.data, 1, map.size, out);
+        fclose(out);
 
-        g_print("Frame captured to capture.raw (%zu bytes)\n", map.size);
+        // g_print("Frame captured to capture.raw (%zu bytes)\n", map.size);
         gst_buffer_unmap(buffer, &map);
     }
 
     gst_sample_unref(sample);
-    trigger_counter += 1;
-    log_trace("Trigger Number: %d", trigger_counter);
+    log_trace("HardwarePiGpioTrigger Trigger Number: %d", trigger_counter);
     //Log Trigger
 }
 
@@ -98,13 +98,13 @@ void *handle_gpio_interrupt(void *arg) {
 int main(int argc, char *argv[]) {
 
     /////////////
-    FILE *logfile = fopen("LogOutput.txt", "a");  // "a" for append mode
+    FILE *logfile = fopen("HardwarePiGpioTriggerLogOutput.txt", "a");  // "a" for append mode
     if (!logfile) {
         fprintf(stderr, "Failed to open log file\n");
         return 1;
     }
     log_add_fp(logfile, LOG_TRACE);  // Log everything (TRACE and above)
-    log_info("Program started");
+    log_info("HardwarePiGpioTrigger Program started");
     /////////////
 
     gst_init(&argc, &argv);
@@ -124,12 +124,11 @@ int main(int argc, char *argv[]) {
     // time_in_seconds = ts.tv_sec + ts.tv_nsec / 1e9;
     time_in_seconds = 0;
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
-    g_usleep(10000000);  // Let the pipeline warm up
-
+    g_usleep(1000000);  // Let the pipeline warm up
     for (int i = 0; i < 4; i++) {
         GstSample *flush_sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
         if (flush_sample) gst_sample_unref(flush_sample);
-        g_print("Flushed frame %d\n", i + 1);
+        // g_print("Flushed frame %d\n", i + 1);
     }
 
     fd = fopen(OUTPUT_FILE_NAME, "w");
@@ -161,7 +160,6 @@ int main(int argc, char *argv[]) {
         printf("Failed to create thread\n");
         return;
     }
-
     // Wait for GPIO thread
     pthread_join(gpio_thread, NULL);
     pthread_attr_destroy(&attr);
