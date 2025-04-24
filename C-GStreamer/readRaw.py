@@ -5,7 +5,7 @@ import cv2
 width, height = 640, 512
 
 # Load raw 16-bit data
-with open("capture2.raw", "rb") as f:
+with open("1.raw", "rb") as f:
     raw_data = f.read()
 
 image_16bit = np.frombuffer(raw_data, dtype=np.uint16).reshape((height, width))

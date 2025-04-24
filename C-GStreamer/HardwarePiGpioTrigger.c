@@ -14,7 +14,7 @@
 
 #define OUTPUT_FILE_NAME "output.txt"
 #define GPIO_CHIP "/dev/gpiochip4"
-#define GPIO_LINE 17  // BCM pin for GPIO17
+#define GPIO_LINE 26  // BCM pin for GPIO17
 #define TIMEOUT_SEC 5
 
 GstElement *appsink = NULL;
@@ -41,7 +41,7 @@ void capture_frame() {
     if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
         char filename[600];
         trigger_counter += 1;
-        snprintf(filename, sizeof(filename), "/home/sarv-pi/IR_IMAGES/%lld.raw", trigger_counter);
+        snprintf(filename, sizeof(filename), "%lld.raw", trigger_counter);
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
         double diff = pts_seconds - time_in_seconds;
