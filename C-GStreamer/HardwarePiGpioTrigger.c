@@ -10,6 +10,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <gpiod.h>
+#include <stdlib.h>
 #include "log.h"
 
 #define OUTPUT_FILE_NAME "output.txt"
@@ -41,7 +42,7 @@ void capture_frame() {
     if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
         char filename[600];
         trigger_counter += 1;
-        snprintf(filename, sizeof(filename), "%lld.raw", trigger_counter);
+        snprintf(filename, sizeof(filename), "/mnt/external/IR/%lld.raw", trigger_counter);
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
         double diff = pts_seconds - time_in_seconds;
@@ -106,7 +107,6 @@ int main(int argc, char *argv[]) {
     log_add_fp(logfile, LOG_TRACE);  // Log everything (TRACE and above)
     log_info("HardwarePiGpioTrigger Program started");
     /////////////
-
     gst_init(&argc, &argv);
     GstElement *pipeline = gst_parse_launch(
         "v4l2src device=/dev/video0 ! "
