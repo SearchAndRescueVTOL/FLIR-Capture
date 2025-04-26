@@ -5,6 +5,7 @@
 
 #include <gst/gst.h>
 #include <gst/app/gstappsink.h>
+#include <gst/app/gstappsrc.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
@@ -29,6 +30,7 @@
 
 // Global variables
 GstElement *appsink;
+GstElement *appsrc;
 FILE *fd;
 long long trigger_counter;
 double time_in_seconds;

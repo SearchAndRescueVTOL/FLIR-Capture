@@ -17,6 +17,8 @@ void capture_frame() {
     GstBuffer *buffer = gst_sample_get_buffer(sample);
     GstMapInfo map;
     if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+        GstFlowReturn ret = gst_app_src_push_buffer(GST_APP_SRC(appsrc),
+                                            gst_buffer_ref(buffer));
         char filename[600];
         trigger_counter += 1;
         snprintf(filename, sizeof(filename), "/mnt/external/IR/%lld.raw", trigger_counter);
@@ -95,7 +97,7 @@ int main(int argc, char *argv[]) {
     char pipeline_str[512];
     snprintf(pipeline_str, sizeof(pipeline_str),
         "v4l2src device=%s ! "
-        "video/x-raw,format=GRAY16_LE,width=640,height=512,framerate=9/1 ! "
+        "video/x-raw,format=I420,width=640,height=512,framerate=9/1 ! "
         "appsink name=sink", device_path);
 
     /////////////
@@ -128,7 +130,18 @@ int main(int argc, char *argv[]) {
     GstElement *pipeline = gst_parse_launch(pipeline_str, NULL);
     appsink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
     g_object_set(G_OBJECT(appsink), "drop", TRUE, "max-buffers", 1, "sync", FALSE, NULL);
-
+    GstElement *display_pipeline = gst_parse_launch(
+        "appsrc name=src ! videoconvert ! autovideosink", NULL);
+    appsrc = gst_bin_get_by_name(GST_BIN(display_pipeline), "src");
+    g_object_set(G_OBJECT(appsrc),
+             "caps", gst_caps_new_simple("video/x-raw",
+                                         "format", G_TYPE_STRING, "I420",
+                                         "width", G_TYPE_INT, 640,
+                                         "height", G_TYPE_INT, 512,
+                                         "framerate", GST_TYPE_FRACTION, 20, 1, NULL),
+             "is-live", TRUE,
+             "format", GST_FORMAT_TIME,
+             NULL);
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
         perror("clock_gettime");
@@ -142,6 +155,7 @@ int main(int argc, char *argv[]) {
     }
     // time_in_seconds = ts.tv_sec + ts.tv_nsec / 1e9;
     time_in_seconds = 0;
+    gst_element_set_state(display_pipeline, GST_STATE_PLAYING);
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     g_usleep(1000000);  // Let the pipeline warm up
     for (int i = 0; i < 4; i++) {
