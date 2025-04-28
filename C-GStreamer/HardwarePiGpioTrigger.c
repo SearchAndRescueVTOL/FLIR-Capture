@@ -17,15 +17,28 @@ void capture_frame() {
     GstBuffer *buffer = gst_sample_get_buffer(sample);
     GstMapInfo map;
     if (gst_buffer_map(buffer, &map, GST_MAP_READ)) {
-        char filename[600];
+        char filename[700];
         trigger_counter += 1;
-        snprintf(filename, sizeof(filename), "/mnt/external/IR/%lld.raw", trigger_counter);
+
+        // Get the current local time
+        time_t now = time(NULL);
+        struct tm *local = localtime(&now);
+
+        // Format the filename with month, day, year, hour, minute, second, and trigger_counter
+        snprintf(filename, sizeof(filename),
+                "/mnt/external/IR/%02d_%02d_%04d_%02d_%02d_%02d_trigger#%lld.raw",
+                local->tm_mon + 1,
+                local->tm_mday,
+                local->tm_year + 1900,
+                local->tm_hour,
+                local->tm_min,
+                local->tm_sec,
+                trigger_counter);
+
         GstClockTime pts = GST_BUFFER_PTS(buffer);
         double pts_seconds = (double)pts / GST_SECOND;
         double diff = pts_seconds - time_in_seconds;
-        // fprintf(fd, "%f \n", diff);
         time_in_seconds = pts_seconds;
-        // fflush(fd);
 
         FILE *out = fopen(filename, "wb");
         fwrite(map.data, 1, map.size, out);
