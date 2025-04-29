@@ -1,22 +1,39 @@
 import numpy as np
 import cv2
+import os
+import glob
 
-# Set dimensions
-width, height = 640, 512
+def convert_raw_to_tiff(input_folder, width=640, height=512):
+    raw_files = glob.glob(os.path.join(input_folder, '**', '*.raw'), recursive=True)
+    
+    if not raw_files:
+        print("No .raw files found!")
+        return
 
-# Load raw 16-bit data
-with open("1.raw", "rb") as f:
-    raw_data = f.read()
+    for raw_path in raw_files:
+        with open(raw_path, "rb") as f:
+            raw_data = f.read()
 
-image_16bit = np.frombuffer(raw_data, dtype=np.uint16).reshape((height, width))
+        try:
+            image_16bit = np.frombuffer(raw_data, dtype=np.uint16).reshape((height, width))
+        except ValueError as e:
+            print(f"Skipping {raw_path}: {e}")
+            continue
 
-# Normalize to full 16-bit range (0 to 65535)
-min_val = np.min(image_16bit)
-max_val = np.max(image_16bit)
+        normalized_16bit = cv2.normalize(image_16bit, None, 0, 65535, cv2.NORM_MINMAX)
 
-normalized_16bit = cv2.normalize(image_16bit, None, 0, 65535, cv2.NORM_MINMAX)
+        # Create output path: same directory, same filename but .tiff
+        tiff_path = os.path.splitext(raw_path)[0] + '.tiff'
+        cv2.imwrite(tiff_path, normalized_16bit)
+        print(f"Saved {tiff_path}")
 
-# Save as a proper 16-bit TIFF image
-cv2.imwrite("capture_normalized_16bit.tiff", normalized_16bit)
+    print("All files converted.")
 
-print("Saved as 16-bit TIFF with normalized contrast.")
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print("Usage: python convert_raw_to_tiff.py <input_folder>")
+    else:
+        folder = sys.argv[1]
+        convert_raw_to_tiff(folder)
+

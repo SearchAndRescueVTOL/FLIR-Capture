@@ -45,7 +45,7 @@ void capture_frame() {
         fclose(out);
         char logData[200];
         snprintf(logData, sizeof(logData), "Image written for capture #%lld", trigger_counter);
-        log_to_mosq(logData);
+        // log_to_mosq(logData);
         // g_print("Frame captured to capture.raw (%zu bytes)\n", map.size);
         gst_buffer_unmap(buffer, &map);
     }
@@ -81,23 +81,23 @@ void *handle_gpio_interrupt(void *arg) {
         }
 
         if (event.event_type == GPIOD_LINE_EVENT_RISING_EDGE) {
-            log_to_mosq("GPIO Event on line 26!");
+            // log_to_mosq("GPIO Event on line 26!");
             capture_frame();
         }
     }
 
     return NULL;
 }
-int log_to_mosq(char *msg){
-    rc = mosquitto_publish(mosq, NULL, MQTT_TOPIC, strlen(msg), msg, 0, false);
-    if (rc != MOSQ_ERR_SUCCESS) {
-        log_trace("Failed to log over mosquitto!\n");
-        return -1;
-    } else {
-        return 0;
-    }
+// int log_to_mosq(char *msg){
+//     rc = mosquitto_publish(mosq, NULL, MQTT_TOPIC, strlen(msg), msg, 0, false);
+//     if (rc != MOSQ_ERR_SUCCESS) {
+//         log_trace("Failed to log over mosquitto!\n");
+//         return -1;
+//     } else {
+//         return 0;
+//     }
 
-}
+// }
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Usage: %s <uvc-device-path>\n", argv[0]);
@@ -121,20 +121,20 @@ int main(int argc, char *argv[]) {
     log_info("HardwarePiGpioTrigger Program started");
     /////////////
     //Initialize mosquitto lib logs
-    mosquitto_lib_init();
+    // mosquitto_lib_init();
 
-    // Create a new Mosquitto client instance
-    mosq = mosquitto_new(NULL, true, NULL);
-    if (!mosq) {
-        fprintf(stderr, "Failed to create Mosquitto instance.\n");
-        return 1;
-    }
-    rc = mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 60);
-    if (rc != MOSQ_ERR_SUCCESS) {
-        fprintf(stderr, "Could not connect to Broker. Error: %s\n", mosquitto_strerror(rc));
-        mosquitto_destroy(mosq);
-        return 1;
-    }
+    // // Create a new Mosquitto client instance
+    // mosq = mosquitto_new(NULL, true, NULL);
+    // if (!mosq) {
+    //     fprintf(stderr, "Failed to create Mosquitto instance.\n");
+    //     return 1;
+    // }
+    // rc = mosquitto_connect(mosq, MQTT_HOST, MQTT_PORT, 60);
+    // if (rc != MOSQ_ERR_SUCCESS) {
+    //     fprintf(stderr, "Could not connect to Broker. Error: %s\n", mosquitto_strerror(rc));
+    //     mosquitto_destroy(mosq);
+    //     return 1;
+    // }
     // End initialization
     // Initialize g-streamer
     gst_init(&argc, &argv);
@@ -145,9 +145,9 @@ int main(int argc, char *argv[]) {
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
         perror("clock_gettime");
-        mosquitto_disconnect(mosq);
-        mosquitto_destroy(mosq);
-        mosquitto_lib_cleanup(); 
+        // mosquitto_disconnect(mosq);
+        // mosquitto_destroy(mosq);
+        // mosquitto_lib_cleanup(); 
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(appsink);
         gst_object_unref(pipeline);   
@@ -167,9 +167,9 @@ int main(int argc, char *argv[]) {
     fd = fopen(OUTPUT_FILE_NAME, "w");
     if (!fd) {
         perror("Failed to open output file");
-        mosquitto_disconnect(mosq);
-        mosquitto_destroy(mosq);
-        mosquitto_lib_cleanup(); 
+        // mosquitto_disconnect(mosq);
+        // mosquitto_destroy(mosq);
+        // mosquitto_lib_cleanup(); 
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(appsink);
         gst_object_unref(pipeline);  
@@ -186,9 +186,9 @@ int main(int argc, char *argv[]) {
     };
     if (gpiod_line_request(line, &config, 0) < 0) {
         perror("GPIO line request failed");
-        mosquitto_disconnect(mosq);
-        mosquitto_destroy(mosq);
-        mosquitto_lib_cleanup(); 
+        // mosquitto_disconnect(mosq);
+        // mosquitto_destroy(mosq);
+        // mosquitto_lib_cleanup(); 
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(appsink);
         gst_object_unref(pipeline);  
@@ -204,9 +204,9 @@ int main(int argc, char *argv[]) {
     pthread_t gpio_thread;
     if (pthread_create(&gpio_thread, &attr, handle_gpio_interrupt, line) != 0) {
         printf("Failed to create thread\n");
-        mosquitto_disconnect(mosq);
-        mosquitto_destroy(mosq);
-        mosquitto_lib_cleanup(); 
+        // mosquitto_disconnect(mosq);
+        // mosquitto_destroy(mosq);
+        // mosquitto_lib_cleanup(); 
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(appsink);
         gst_object_unref(pipeline);  
@@ -217,9 +217,9 @@ int main(int argc, char *argv[]) {
     }
     // Wait for GPIO thread
     pthread_join(gpio_thread, NULL);
-    mosquitto_disconnect(mosq);
-    mosquitto_destroy(mosq);
-    mosquitto_lib_cleanup();
+    // mosquitto_disconnect(mosq);
+    // mosquitto_destroy(mosq);
+    // mosquitto_lib_cleanup();
     pthread_attr_destroy(&attr);
     gst_element_set_state(pipeline, GST_STATE_NULL);
     gst_object_unref(appsink);

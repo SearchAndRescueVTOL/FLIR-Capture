@@ -32,12 +32,12 @@ GstElement *appsink;
 FILE *fd;
 long long trigger_counter;
 double time_in_seconds;
-struct mosquitto *mosq;
-int rc;
+// struct mosquitto *mosq;
+// int rc;
 // Function declarations
 void set_cpu_affinity(int core_id);
 void capture_frame();
 void *handle_gpio_interrupt(void *arg);
-int log_to_mosq(char *msg);
+// int log_to_mosq(char *msg);
 
 #endif // HARDWARE_PI_GPIO_TRIGGER_H
