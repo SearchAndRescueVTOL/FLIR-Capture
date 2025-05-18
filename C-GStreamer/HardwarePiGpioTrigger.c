@@ -17,8 +17,8 @@ void setup_session_directory_and_log() {
     mkdir("/mnt/external/IR", 0755); // Ensure parent directory exists
     mkdir(session_dir, 0755);
 
-    char log_path[300];
-    snprintf(log_path, sizeof(log_path), "%s.txt", timestamp);
+    char log_path[320];
+    snprintf(log_path, sizeof(log_path), "logs/%s.txt", timestamp);
     logfile = fopen(log_path, "a+");
     if (!logfile) {
         fprintf(stderr, "Failed to open log file\n");
