@@ -15,6 +15,8 @@
 #include <time.h>
 #include <gpiod.h>
 #include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include "log.h"
 #include <mosquitto.h>
 
@@ -23,15 +25,17 @@
 #define GPIO_CHIP "/dev/gpiochip4"
 #define GPIO_LINE 26
 #define TIMEOUT_SEC 5
-#define MQTT_HOST "localhost"
-#define MQTT_PORT 1883
-#define MQTT_TOPIC "FLIR/logs"
+// #define MQTT_HOST "localhost"
+// #define MQTT_PORT 1883
+// #define MQTT_TOPIC "FLIR/logs"
 
 // Global variables
 GstElement *appsink;
 FILE *fd;
 long long trigger_counter;
 double time_in_seconds;
+char session_dir[256];
+FILE* logfile;
 // struct mosquitto *mosq;
 // int rc;
 // Function declarations

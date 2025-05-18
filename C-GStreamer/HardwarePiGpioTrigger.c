@@ -1,12 +1,35 @@
 #include "HardwarePiGpioTrigger.h"
-void set_cpu_affinity(int core_id) {
-    cpu_set_t cpuset;
-    CPU_ZERO(&cpuset);
-    CPU_SET(core_id, &cpuset); // Assign thread to core_id
-    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),&cpuset) != 0) {
-      printf("Error getting affinity!\n");
-    }
+
+char *get_timestamp_string() {
+    static char buffer[100];
+    struct timespec ts;
+    clock_gettime(CLOCK_REALTIME, &ts);
+    struct tm *local = localtime(&ts.tv_sec);
+    snprintf(buffer, sizeof(buffer), "%02d_%02d_%04d_%02d_%02d_%02d_%03ld",
+             local->tm_mon + 1, local->tm_mday, local->tm_year + 1900,
+             local->tm_hour, local->tm_min, local->tm_sec, ts.tv_nsec / 1000000);
+    return buffer;
 }
+
+void setup_session_directory_and_log() {
+    char *timestamp = get_timestamp_string();
+    snprintf(session_dir, sizeof(session_dir), "/mnt/external/IR/%s", timestamp);
+    mkdir("/mnt/external/IR", 0755); // Ensure parent directory exists
+    mkdir(session_dir, 0755);
+
+    char log_path[300];
+    snprintf(log_path, sizeof(log_path), "%s.txt", timestamp);
+    logfile = fopen(log_path, "a+");
+    if (!logfile) {
+        fprintf(stderr, "Failed to open log file\n");
+        exit(1);
+    }
+    fprintf(logfile, "HardwarePiGpioTrigger Program Started!\n");
+    fflush(logfile);
+    // log_add_fp(logfile, LOG_TRACE);
+    // log_info("HardwarePiGpioTrigger Program started");
+}
+
 void capture_frame() {
     GstSample *sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
     if (!sample) {
@@ -20,39 +43,28 @@ void capture_frame() {
         char filename[700];
         trigger_counter += 1;
 
-        // Get the current local time
-        time_t now = time(NULL);
-        struct tm *local = localtime(&now);
-
-        // Format the filename with month, day, year, hour, minute, second, and trigger_counter
+        char *current_time = get_timestamp_string();
         snprintf(filename, sizeof(filename),
-                "/mnt/external/IR/%02d_%02d_%04d_%02d_%02d_%02d_trigger#%lld.raw",
-                local->tm_mon + 1,
-                local->tm_mday,
-                local->tm_year + 1900,
-                local->tm_hour,
-                local->tm_min,
-                local->tm_sec,
-                trigger_counter);
-
-        GstClockTime pts = GST_BUFFER_PTS(buffer);
-        double pts_seconds = (double)pts / GST_SECOND;
-        double diff = pts_seconds - time_in_seconds;
-        time_in_seconds = pts_seconds;
+                 "%s/%s_ir_#%lld.raw",
+                 session_dir, current_time, trigger_counter);
 
         FILE *out = fopen(filename, "wb");
         fwrite(map.data, 1, map.size, out);
         fclose(out);
-        char logData[200];
-        snprintf(logData, sizeof(logData), "Image written for capture #%lld", trigger_counter);
-        // log_to_mosq(logData);
-        // g_print("Frame captured to capture.raw (%zu bytes)\n", map.size);
+        fprintf(logfile, "Saved %s\n", filename);
+        fflush(logfile);
         gst_buffer_unmap(buffer, &map);
     }
 
     gst_sample_unref(sample);
-    log_trace("HardwarePiGpioTrigger Trigger Number: %d", trigger_counter);
-    //Log Trigger
+}
+void set_cpu_affinity(int core_id) {
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(core_id, &cpuset); // Assign thread to core_id
+    if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),&cpuset) != 0) {
+      printf("Error getting affinity!\n");
+    }
 }
 
 void *handle_gpio_interrupt(void *arg) {
@@ -103,7 +115,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage: %s <uvc-device-path>\n", argv[0]);
         return 1;
     }
-
+    setup_session_directory_and_log();
     const char *device_path = argv[1];
     char pipeline_str[512];
     snprintf(pipeline_str, sizeof(pipeline_str),
@@ -112,13 +124,8 @@ int main(int argc, char *argv[]) {
         "appsink name=sink", device_path);
 
     /////////////
-    FILE *logfile = fopen("HardwarePiGpioTriggerLogOutput.txt", "a");  // "a" for append mode
-    if (!logfile) {
-        fprintf(stderr, "Failed to open log file\n");
-        return 1;
-    }
-    log_add_fp(logfile, LOG_TRACE);  // Log everything (TRACE and above)
-    log_info("HardwarePiGpioTrigger Program started");
+    // log_add_fp(logfile, LOG_TRACE);  // Log everything (TRACE and above)
+    // log_info("HardwarePiGpioTrigger Program started");
     /////////////
     //Initialize mosquitto lib logs
     // mosquitto_lib_init();
@@ -145,6 +152,7 @@ int main(int argc, char *argv[]) {
     struct timespec ts;
     if (clock_gettime(CLOCK_REALTIME, &ts) == -1) {
         perror("clock_gettime");
+        fclose(logfile);
         // mosquitto_disconnect(mosq);
         // mosquitto_destroy(mosq);
         // mosquitto_lib_cleanup(); 
@@ -169,7 +177,8 @@ int main(int argc, char *argv[]) {
         perror("Failed to open output file");
         // mosquitto_disconnect(mosq);
         // mosquitto_destroy(mosq);
-        // mosquitto_lib_cleanup(); 
+        // mosquitto_lib_cleanup();
+        fclose(logfile); 
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(appsink);
         gst_object_unref(pipeline);  
@@ -189,6 +198,8 @@ int main(int argc, char *argv[]) {
         // mosquitto_disconnect(mosq);
         // mosquitto_destroy(mosq);
         // mosquitto_lib_cleanup(); 
+        fclose(fd);
+        fclose(logfile);
         gst_element_set_state(pipeline, GST_STATE_NULL);
         gst_object_unref(appsink);
         gst_object_unref(pipeline);  
@@ -211,6 +222,7 @@ int main(int argc, char *argv[]) {
         gst_object_unref(appsink);
         gst_object_unref(pipeline);  
         fclose(fd);
+        fclose(logfile);
         gpiod_line_release(line);
         gpiod_chip_close(chip);
         return;
@@ -225,7 +237,7 @@ int main(int argc, char *argv[]) {
     gst_object_unref(appsink);
     gst_object_unref(pipeline);
     fclose(fd);
-
+    fclose(logfile);
     gpiod_line_release(line);
     gpiod_chip_close(chip);
     return 0;
