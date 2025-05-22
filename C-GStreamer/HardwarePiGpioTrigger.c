@@ -13,10 +13,9 @@ char *get_timestamp_string() {
 
 void setup_session_directory_and_log() {
     char *timestamp = get_timestamp_string();
-    snprintf(session_dir, sizeof(session_dir), "/mnt/external/IR/%s", timestamp);
-    mkdir("/mnt/external/IR", 0755); // Ensure parent directory exists
+    snprintf(session_dir, sizeof(session_dir), "/home/sarv-pi/IR/%s", timestamp);
+    mkdir("/home/sarv-pi/IR", 0755); // Ensure parent directory exists
     mkdir(session_dir, 0755);
-
     char log_path[320];
     snprintf(log_path, sizeof(log_path), "logs/%s.txt", timestamp);
     logfile = fopen(log_path, "a+");
