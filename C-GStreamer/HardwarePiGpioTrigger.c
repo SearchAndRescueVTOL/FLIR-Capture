@@ -55,6 +55,7 @@ void capture_frame() {
         fflush(logfile);
         gst_buffer_unmap(buffer, &map);
         printf("Saved: %s\n", filename);
+        fflush(stdout);
     }
 
     gst_sample_unref(sample);
