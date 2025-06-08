@@ -20,7 +20,7 @@ void setup_session_directory_and_log() {
     snprintf(log_path, sizeof(log_path), "logs/%s.txt", timestamp);
     logfile = fopen(log_path, "a+");
     if (!logfile) {
-        fprintf(stderr, "\033[31mFailed to open log file\033[0m\n");
+        fprintf(stderr, "----------------------------------\033[31mFailed to open log file\033[0m\n");
         exit(1);
     }
     fprintf(logfile, "HardwarePiGpioTrigger Program Started!\n");
@@ -32,7 +32,7 @@ void setup_session_directory_and_log() {
 void capture_frame() {
     GstSample *sample = gst_app_sink_pull_sample(GST_APP_SINK(appsink));
     if (!sample) {
-        g_printerr("\033[31mFailed to capture sample\033[0m\n");
+        g_printerr("----------------------------------\033[31mFailed to capture sample\033[0m\n");
         return;
     }
 
@@ -64,7 +64,7 @@ void set_cpu_affinity(int core_id) {
     CPU_ZERO(&cpuset);
     CPU_SET(core_id, &cpuset); // Assign thread to core_id
     if (pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t),&cpuset) != 0) {
-      printf("\033[31mError getting affinity!\033[0m\n");
+      printf("----------------------------------\033[31mError getting affinity!\033[0m\n");
     }
 }
 
@@ -73,14 +73,14 @@ void *handle_gpio_interrupt(void *arg) {
     struct gpiod_line_event event;
     struct timespec timeout;
     struct timespec ts;
-    set_cpu_affinity(3);
+    // set_cpu_affinity(3);
     while (1) {
         timeout.tv_sec = TIMEOUT_SEC;
         timeout.tv_nsec = 0;
 
         int ret = gpiod_line_event_wait(line, &timeout);
         if (ret < 0) {
-            perror("\033[31mError waiting for GPIO event\033[0m");
+            perror("----------------------------------\033[31mError waiting for GPIO event\033[0m");
             break;
         } else if (ret == 0) {
             continue;
@@ -89,7 +89,7 @@ void *handle_gpio_interrupt(void *arg) {
         timespec_get(&ts, TIME_UTC);
         ret = gpiod_line_event_read(line, &event);
         if (ret < 0) {
-            perror("\033[31mError reading GPIO event\033[0m");
+            perror("----------------------------------\033[31mError reading GPIO event\033[0m");
             break;
         }
 
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
 
     fd = fopen(OUTPUT_FILE_NAME, "w");
     if (!fd) {
-        perror("\033[31mFailed to open output file\033[0m");
+        perror("----------------------------------\033[31mFailed to open output file\033[0m");
         // mosquitto_disconnect(mosq);
         // mosquitto_destroy(mosq);
         // mosquitto_lib_cleanup();
@@ -195,7 +195,7 @@ int main(int argc, char *argv[]) {
         .flags = 0
     };
     if (gpiod_line_request(line, &config, 0) < 0) {
-        perror("\033[31mGPIO line request failed\033[0m");
+        perror("----------------------------------\033[31mGPIO line request failed\033[0m");
         // mosquitto_disconnect(mosq);
         // mosquitto_destroy(mosq);
         // mosquitto_lib_cleanup(); 
@@ -214,8 +214,8 @@ int main(int argc, char *argv[]) {
     param.sched_priority = sched_get_priority_max(SCHED_FIFO);
     pthread_attr_setschedparam(&attr, &param);
     pthread_t gpio_thread;
-    if (pthread_create(&gpio_thread, &attr, handle_gpio_interrupt, line) != 0) {
-        printf("\033[31mFailed to create thread\033[0m\n");
+    if (pthread_create(&gpio_thread, NULL, handle_gpio_interrupt, line) != 0) {
+        printf("----------------------------------\033[31mFailed to create thread\033[0m\n");
         // mosquitto_disconnect(mosq);
         // mosquitto_destroy(mosq);
         // mosquitto_lib_cleanup(); 
